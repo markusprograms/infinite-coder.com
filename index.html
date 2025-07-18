@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Infinite Coder</title>
+        <link rel="stylesheet" href="style.css">
+        <link rel="icon" href="favicon.ico">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="Hobbyist programmer, full-stack developer and 3D designer">
+        <meta charset="UTF-8">
+    </head>
+    <body>
+        <div id="main">
+            <img id="logo" src="images/logo-cut.png" alt="Infinite Coder's logo">
+            <h1 id="title">Infinite Coder</h1>
+            <h2 id="subtitle">Hobbyist programmer, full-stack developer and 3D designer</h2>
+            <div id="social-networks">
+                <a id="khan-academy" href="https://www.khanacademy.org/profile/markusprograms/" target="_blank">
+                    <img alt="Khan Academy profile" src="images/khan-academy-icon.svg">
+                </a>
+                <a id="github" href="https://github.com/markusprograms" target="_blank">
+                    <img alt="Github profile" src="images/github-icon.svg">
+                </a>
+                <a id="replit" href="https://replit.com/@markusprograms" target="_blank">
+                    <img alt="Replit profile" src="images/replit-icon.png">
+                </a>
+                <a id="codepen" href="https://codepen.io/markusprograms" target="_blank">
+                    <img alt="Codepen profile" src="images/codepen-icon.svg">
+                </a>
+                <a id="printables" href="https://www.printables.com/@icoder_2166174" target="_blank">
+                    <img alt="Printables profile" src="images/printables-icon.svg">
+                </a>
+                <a id="thingiverse" href="https://www.thingiverse.com/markusprograms/designs" target="_blank">
+                    <img alt="Thingiverse profile" src="images/thingiverse-icon.png">
+                </a>
+                <a id="crealitycloud" href="https://www.crealitycloud.com/user-profile/1500568910" target="_blank">
+                    <img alt="Crealitycloud profile" src="images/crealitycloud-logo.png">
+                </a>
+            </div>
+        </div>
+    </body>
+    <script>
+        var main = document.getElementById("main"); 
+        var mainClickTimeout = setTimeout(() => {}, 0); 
+
+        main.addEventListener("click", function(e) {
+            main.classList.add("clicked"); 
+            clearTimeout(mainClickTimeout); 
+            mainClickTimeout = setTimeout(() => {
+                main.classList.remove("clicked"); 
+            }, 250); 
+        }, false); 
+    </script>
+</html>
