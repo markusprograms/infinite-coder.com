@@ -5,13 +5,7 @@ FROM php:8.2-apache
 WORKDIR /var/www/html
 
 # Copy all files
-COPY data ../data
-COPY tmp ../tmp
-COPY web .
-
-# Modify permissions
-RUN chown -R www-data:www-data /var/www/data
-RUN chmod -R 755 /var/www/data
+COPY . .
 
 # Enable mod_rewrite for .htaccess
 RUN a2enmod rewrite
