@@ -11,9 +11,9 @@
      */
 
     $env = [
-        "database_host" => "localhost", // Localhost in most cases. If you don't have a hosting plan with databases you can connect to an external one
-        "database_user" => "ginfini2", // Username of the database owner
-        "database_password" => "Mar1165kus", // Password of the user
-        "database_name" => "ginfini2db" // Name of the database
+        "database_host" => "db", // Localhost in most cases. If you don't have a hosting plan with databases you can connect to an external one
+        "database_user" => "app_user", // Username of the database owner
+        "database_password" => "app_password", // Password of the user
+        "database_name" => "app_db" // Name of the database
     ];
 ?>

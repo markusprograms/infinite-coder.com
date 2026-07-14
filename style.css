@@ -1,10 +1,10 @@
 @font-face {
     font-family: Share Tech Mono;
-    src: url("fonts/share-tech-mono.ttf");
+    src: url("assets/fonts/share-tech-mono.ttf");
 }
 
 * {
-    font-family: Share Tech Mono;
+    font-family: Share Tech Mono, system-ui;
 }
 
 html, body {
