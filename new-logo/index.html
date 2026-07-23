@@ -19,6 +19,26 @@
         </div>
     </body>
     <script>
+        const LOGO = {
+            instanceCount: 720, 
+            radiusX: 0.6,
+            radiusY: 0.3,
+            lightOffset: 0.01,
+            tau2: Math.PI * 4,
+            darkLayer: {
+                r: 0.12, 
+                g: 0.35, 
+                b: 0.12, 
+                a: 1.0
+            },
+            lightLayer: {
+                r: 0.24, 
+                g: 0.7, 
+                b: 0.24, 
+                a: 1.0
+            }
+        };
+
         function createProgram(gl, vertexShaderText, fragmentShaderText) {
             /**
              * A function that returns a webglprogram object given the shader text
@@ -43,7 +63,7 @@
 
         let webglNotSupportedWarningDisplayed = false; 
 
-        const vertexSize = 1;
+        const vertexSize = 1; // Maximum possible (recommended value)
         const verts = [
             // Dark quad
             -vertexSize, -vertexSize, 
@@ -65,17 +85,13 @@
         ];
 
         const vertexShaderCode = `#version 300 es
-    
-            //this line tells the shader what the precision is. This is needed in both the shaders. "lowp" means low, "mediump" means medium, and "highp" is high.
             precision mediump float;
 
             uniform float time;
-
             uniform float instanceOffset;
             
-            //this is the position of the vertices, and will be passed in from the buffers later
+            // This is the position of the vertices, and will be passed in from the buffers later
             in vec2 vertPos;
-
             out vec2 localPos;
 
             flat out int layer;
@@ -84,23 +100,23 @@
                 localPos = vertPos / 0.1;
 
                 float i = float(gl_InstanceID) + instanceOffset;
-                float count = 720.0;
+                float count = ${LOGO.instanceCount.toFixed(1)};
 
-                float angle = (i / count) * 12.566370614; // 4π
+                float angle = (i / count) * ${LOGO.tau2}; 
 
-                float x = cos(angle * 0.5) * 0.6;
-                float y = sin(angle) * 0.3;
+                float x = cos(angle * 0.5) * ${LOGO.radiusX}; // Also lowers the cos frequency to half
+                float y = sin(angle) * ${LOGO.radiusY};
                 
-                bool light = gl_VertexID >= 6;
+                bool light = gl_VertexID >= 6; // The 7-12th vertices are for the light layer
 
-                layer = light ? 1 : 0;
+                layer = light ? 1 : 0; // 0 = dark, 1 = light
 
                 vec2 center = vec2(x, y);
                 if (light) {
                     center += vec2(
                         cos(time),
                         sin(time)
-                    ) * 0.01;
+                    ) * ${LOGO.lightOffset};
                 }
 
                 gl_Position =
@@ -118,31 +134,30 @@
 
             in vec2 localPos;
             
-            //In WebGL1, you set gl_FragColor, just like gl_Position, but in WebGL2, you use an "out" vec4 statement, with the name of the output. The name can"t be "gl_FragColor"
             out vec4 fragColor;
 
             flat in int layer;
             
             void main() {
-                float d = dot(localPos, localPos);
+                float d = dot(localPos, localPos); // d = sqrt(localPos.x * localPos.x, localPos.y * localPos.y)
 
-                if (d > 1.0)
+                if (d > 1.0) // If the distance from the center is greater than the radius, discard the fragment
                     discard;
 
                 if (layer == 0) {
                     fragColor = vec4(
-                        0.12,
-                        0.35,
-                        0.12,
-                        1.0
+                        ${LOGO.darkLayer.r.toFixed(1)},
+                        ${LOGO.darkLayer.g.toFixed(1)},
+                        ${LOGO.darkLayer.b.toFixed(1)},
+                        ${LOGO.darkLayer.a.toFixed(1)}
                     );
                 }
                 else {
                     fragColor = vec4(
-                        0.24,
-                        0.70,
-                        0.24,
-                        1.0
+                        ${LOGO.lightLayer.r.toFixed(1)},
+                        ${LOGO.lightLayer.g.toFixed(1)},
+                        ${LOGO.lightLayer.b.toFixed(1)},
+                        ${LOGO.lightLayer.a.toFixed(1)}
                     );
                 }
             }
@@ -161,7 +176,7 @@
             }
 
             // Sets background color (but doesn't use it yet)
-            gl.clearColor(0, 0, 0, 1);
+            gl.clearColor(0, 0, 0, 0); // Fully transparent
 
             // Parameters: offsetX, offsetY, width, height
             gl.viewport(offsetX, 0, size, size);
@@ -205,7 +220,7 @@
 
             // Set the instance offset
             let instanceOffsetLoc = gl.getUniformLocation(program, "instanceOffset");
-            gl.uniform1f(instanceOffsetLoc, instanceOffset.toFixed(1)); // Also convert it to float which is required by WebGL
+            gl.uniform1f(instanceOffsetLoc, instanceOffset); 
 
             this.gl = gl;
             this.timeLoc = gl.getUniformLocation(program, "time");
