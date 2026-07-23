@@ -17,10 +17,11 @@
             <canvas id="left-side" width="350" height="500"></canvas>
             <canvas id="right-side" width="150" height="500"></canvas>
         </div>
+        <b>FPS: </b><span id="fps-counter"></span>
     </body>
     <script>
         const LOGO = {
-            instanceCount: 720, 
+            visibleInstanceCount: 720, // Visible instances across both canvases
             radiusX: 0.6,
             radiusY: 0.3,
             lightOffset: 0.01,
@@ -36,7 +37,8 @@
                 g: 0.7, 
                 b: 0.24, 
                 a: 1.0
-            }
+            }, 
+            perfMultiplier: 0.001666 // Larger number = faster animation
         };
 
         function createProgram(gl, vertexShaderText, fragmentShaderText) {
@@ -51,6 +53,9 @@
             gl.shaderSource(fragmentShader, fragmentShaderText);
             gl.compileShader(vertexShader);
             gl.compileShader(fragmentShader);
+            if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+                console.error(gl.getShaderInfoLog(vertexShader));
+            }
             
             // These lines create the program and attaches the shaders
             let program = gl.createProgram();
@@ -100,7 +105,7 @@
                 localPos = vertPos / 0.1;
 
                 float i = float(gl_InstanceID) + instanceOffset;
-                float count = ${LOGO.instanceCount.toFixed(1)};
+                float count = ${LOGO.visibleInstanceCount.toFixed(1)};
 
                 float angle = (i / count) * ${LOGO.tau2}; 
 
@@ -163,7 +168,7 @@
             }
         `;
 
-        function Renderer(canvas, size, offsetX, instanceOffset) {
+        function Renderer(canvas, size, offsetX, instanceOffset, instanceCount) {
             /**
              * Creates a WebGL context for the provided canvas, sets the viewport, creates a WebGL program, supplies vertex data to the program
              * and configures instance offset.
@@ -224,6 +229,7 @@
 
             this.gl = gl;
             this.timeLoc = gl.getUniformLocation(program, "time");
+            this.instanceCount = instanceCount; 
         }
         Renderer.prototype.render = function(perf) {
             /**
@@ -234,26 +240,49 @@
             this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
             // Sets the "timeLoc" variable in the WebGL program
-            this.gl.uniform1f(this.timeLoc, perf * 0.001666);
+            this.gl.uniform1f(this.timeLoc, perf * LOGO.perfMultiplier);
 
             // Draws the logo
             this.gl.drawArraysInstanced(
                 this.gl.TRIANGLES,
                 0,
-                12,
-                720
+                12, // Number of vertices
+                this.instanceCount
             );
         }
+
+        let targetLogoSize = 600;
 
         // Fetches the canvas element
         let leftSide = document.getElementById("left-side"); 
         let rightSide = document.getElementById("right-side");
 
-        let leftSideRenderer = new Renderer(leftSide, 500, 0, 0);
-        let rightSideRenderer = new Renderer(rightSide, 500, -leftSide.width, -150);
+        leftSide.width = targetLogoSize * (7 / 10);
+        leftSide.height = targetLogoSize; 
+
+        rightSide.width = targetLogoSize * (3 / 10);
+        rightSide.height = targetLogoSize; 
+
+        document.getElementById("logo").style.width = targetLogoSize + "px";
+        document.getElementById("logo").style.height = targetLogoSize + "px";
+
+        let leftSideRenderer = new Renderer(leftSide, leftSide.height, 0, 60, 600);
+        let rightSideRenderer = new Renderer(rightSide, leftSide.height, -leftSide.width, -100, 220);
+
+        let frames = 0;
+        let lastTime = performance.now();
+        const fpsCounter = document.getElementById("fps-counter");
 
         function draw() {
             let perf = performance.now();
+
+            frames ++;
+
+            if (perf - lastTime >= 1000) {
+                fpsCounter.innerHTML = frames; 
+                frames = 0;
+                lastTime = perf;
+            }
 
             leftSideRenderer.render(perf);
             rightSideRenderer.render(perf); 
