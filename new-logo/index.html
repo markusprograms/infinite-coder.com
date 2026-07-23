@@ -10,12 +10,15 @@
                 height: 500px; 
                 display: flex; 
             }
+            .logo-canvas {
+                image-rendering: pixelated;
+            }
         </style>
     </head>
     <body>
         <div id="logo">
-            <canvas id="left-side" width="350" height="500"></canvas>
-            <canvas id="right-side" width="150" height="500"></canvas>
+            <canvas class="logo-canvas" id="left-side" width="350" height="500"></canvas>
+            <canvas class="logo-canvas" id="right-side" width="150" height="500"></canvas>
         </div>
         <b>FPS: </b><span id="fps-counter"></span>
     </body>
@@ -68,9 +71,9 @@
 
         let webglNotSupportedWarningDisplayed = false; 
 
-        const vertexSize = 1; // Maximum possible (recommended value)
+        const vertexSize = 0.1;
         const verts = [
-            // Dark quad
+            // Light quad
             -vertexSize, -vertexSize, 
             vertexSize, -vertexSize,
             -vertexSize, vertexSize, 
@@ -79,7 +82,7 @@
             vertexSize, vertexSize, 
             -vertexSize, vertexSize, 
 
-            // Light quad
+            // Dark quad
             -vertexSize, -vertexSize, 
             vertexSize, -vertexSize,
             -vertexSize, vertexSize, 
@@ -112,15 +115,15 @@
                 float x = cos(angle * 0.5) * ${LOGO.radiusX}; // Also lowers the cos frequency to half
                 float y = sin(angle) * ${LOGO.radiusY};
                 
-                bool light = gl_VertexID >= 6; // The 7-12th vertices are for the light layer
+                bool light = gl_VertexID <= 6; // The 7-12th vertices are for the light layer
 
                 layer = light ? 1 : 0; // 0 = dark, 1 = light
 
                 vec2 center = vec2(x, y);
                 if (light) {
                     center += vec2(
-                        cos(time),
-                        sin(time)
+                        cos(-time),
+                        sin(-time)
                     ) * ${LOGO.lightOffset};
                 }
 
@@ -267,7 +270,7 @@
         document.getElementById("logo").style.height = targetLogoSize + "px";
 
         let leftSideRenderer = new Renderer(leftSide, leftSide.height, 0, 60, 600);
-        let rightSideRenderer = new Renderer(rightSide, leftSide.height, -leftSide.width, -100, 220);
+        let rightSideRenderer = new Renderer(rightSide, leftSide.height, -leftSide.width, -100, 221);
 
         let frames = 0;
         let lastTime = performance.now();
