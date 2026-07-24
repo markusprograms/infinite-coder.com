@@ -6,8 +6,6 @@
         <title>New logo</title>
         <style>
             #logo {
-                width: 500px; 
-                height: 500px; 
                 display: flex; 
             }
             .logo-canvas {
@@ -17,17 +15,18 @@
     </head>
     <body>
         <div id="logo">
-            <canvas class="logo-canvas" id="left-side" width="350" height="500"></canvas>
-            <canvas class="logo-canvas" id="right-side" width="150" height="500"></canvas>
+            <canvas class="logo-canvas" id="left-side"></canvas>
+            <canvas class="logo-canvas" id="right-side"></canvas>
         </div>
         <b>FPS: </b><span id="fps-counter"></span>
     </body>
     <script>
         const LOGO = {
-            visibleInstanceCount: 720, // Visible instances across both canvases
+            size: 600, // In pixels
+            visibleInstanceCount: null, // Calculated later based on logo size
             radiusX: 0.6,
             radiusY: 0.3,
-            lightOffset: 0.01,
+            lightOffset: null, // Calculated later based on logo size
             tau2: Math.PI * 4,
             darkLayer: {
                 r: 0.12, 
@@ -43,6 +42,8 @@
             }, 
             perfMultiplier: 0.001666 // Larger number = faster animation
         };
+        LOGO.visibleInstanceCount = 720 / 600 * LOGO.size; // Visible instances across both canvases
+        LOGO.lightOffset = 0.02 * 600 / LOGO.size; 
 
         function createProgram(gl, vertexShaderText, fragmentShaderText) {
             /**
@@ -254,23 +255,22 @@
             );
         }
 
-        let targetLogoSize = 600;
-
-        // Fetches the canvas element
+        // Fetches the canvas elements
         let leftSide = document.getElementById("left-side"); 
         let rightSide = document.getElementById("right-side");
 
-        leftSide.width = targetLogoSize * (7 / 10);
-        leftSide.height = targetLogoSize; 
+        // Resizes the canvases and the container
+        leftSide.width = LOGO.size * (7 / 10);
+        leftSide.height = LOGO.size; 
 
-        rightSide.width = targetLogoSize * (3 / 10);
-        rightSide.height = targetLogoSize; 
+        rightSide.width = LOGO.size * (3 / 10);
+        rightSide.height = LOGO.size; 
 
-        document.getElementById("logo").style.width = targetLogoSize + "px";
-        document.getElementById("logo").style.height = targetLogoSize + "px";
+        document.getElementById("logo").style.width = LOGO.size + "px";
+        document.getElementById("logo").style.height = LOGO.size + "px";
 
-        let leftSideRenderer = new Renderer(leftSide, leftSide.height, 0, 60, 600);
-        let rightSideRenderer = new Renderer(rightSide, leftSide.height, -leftSide.width, -100, 221);
+        let leftSideRenderer = new Renderer(leftSide, leftSide.height, 0, LOGO.visibleInstanceCount / 720 * 60, LOGO.visibleInstanceCount / 720 * 610);
+        let rightSideRenderer = new Renderer(rightSide, leftSide.height, -leftSide.width, LOGO.visibleInstanceCount / 720 * -100, LOGO.visibleInstanceCount / 720 * 230);
 
         let frames = 0;
         let lastTime = performance.now();
