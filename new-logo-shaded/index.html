@@ -82,11 +82,10 @@
         const vertexShaderCode = `#version 300 es
             precision mediump float;
 
-            uniform float time;
+            uniform vec2 lightDir;
             uniform float instanceOffset;
             
-            // This is the position of the vertices, and will be passed in from the buffers later
-            in vec2 vertPos;
+            in vec2 vertPos; // This is the position of the vertices, and will be passed in from the buffers later
             out vec2 localPos;
             out float brightness; 
             
@@ -102,11 +101,6 @@
                 float y = sin(angle) * ${LOGO.radiusY};
 
                 vec2 center = vec2(x, y);
-                
-                vec2 lightDir = normalize(vec2(
-                    cos(-time),
-                    sin(-time)
-                ));
 
                 brightness = dot(localPos, lightDir);
                 brightness = brightness * 0.5 + 0.5;
@@ -152,6 +146,23 @@
                 );
             }
         `;
+
+        function Vector(x, y) {
+            this.x = x; 
+            this.y = y; 
+        }
+
+        Vector.prototype.divide = function(scalar) {
+            return new Vector(this.x / scalar, this.y / scalar);
+        }
+
+        Vector.prototype.magnitude = function() {
+            return Math.sqrt(this.x * this.x + this.y * this.y);
+        }
+
+        Vector.prototype.normalize = function() {
+            return this.divide(this.magnitude());
+        }
 
         function Renderer(canvas, size, offsetX, instanceOffset, instanceCount) {
             /**
@@ -219,7 +230,7 @@
             gl.uniform1f(instanceOffsetLoc, instanceOffset); 
 
             this.gl = gl;
-            this.timeLoc = gl.getUniformLocation(program, "time");
+            this.lightDirPos = gl.getUniformLocation(program, "lightDir");
             this.instanceCount = instanceCount; 
         }
         Renderer.prototype.render = function(perf) {
@@ -230,8 +241,14 @@
             // Clears the color buffer bits, showing the background color
             this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
-            // Sets the "timeLoc" variable in the WebGL program
-            this.gl.uniform1f(this.timeLoc, perf * LOGO.perfMultiplier);
+            // Calculates and sets the "lightDir" variable in the WebGL program
+            let time = perf * LOGO.perfMultiplier; 
+            let lightDir = new Vector(
+                Math.sin(time),
+                Math.cos(time)
+            );
+            lightDir = lightDir.normalize();
+            this.gl.uniform2fv(this.lightDirPos, [lightDir.x, lightDir.y]);
 
             // Draws the logo
             this.gl.drawArraysInstanced(
