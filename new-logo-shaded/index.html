@@ -8,9 +8,6 @@
             #logo {
                 display: flex; 
             }
-            .logo-canvas {
-                image-rendering: pixelated;
-            }
         </style>
     </head>
     <body>
@@ -29,16 +26,14 @@
             lightOffset: null, // Calculated later based on logo size
             tau2: Math.PI * 4,
             darkLayer: {
-                r: 0.12, 
-                g: 0.35, 
-                b: 0.12, 
-                a: 1.0
+                r: 0.10, 
+                g: 0.30, 
+                b: 0.10
             },
             lightLayer: {
-                r: 0.24, 
-                g: 0.7, 
-                b: 0.24, 
-                a: 1.0
+                r: 0.32, 
+                g: 0.9, 
+                b: 0.32
             }, 
             perfMultiplier: 0.001666 // Larger number = faster animation
         };
@@ -74,16 +69,7 @@
 
         const vertexSize = 0.1;
         const verts = [
-            // Light quad
-            -vertexSize, -vertexSize, 
-            vertexSize, -vertexSize,
-            -vertexSize, vertexSize, 
-
-            vertexSize, -vertexSize, 
-            vertexSize, vertexSize, 
-            -vertexSize, vertexSize, 
-
-            // Dark quad
+            // Square
             -vertexSize, -vertexSize, 
             vertexSize, -vertexSize,
             -vertexSize, vertexSize, 
@@ -102,8 +88,7 @@
             // This is the position of the vertices, and will be passed in from the buffers later
             in vec2 vertPos;
             out vec2 localPos;
-
-            flat out int layer;
+            out float brightness; 
             
             void main() {          
                 localPos = vertPos / 0.1;
@@ -115,18 +100,16 @@
 
                 float x = cos(angle * 0.5) * ${LOGO.radiusX}; // Also lowers the cos frequency to half
                 float y = sin(angle) * ${LOGO.radiusY};
-                
-                bool light = gl_VertexID <= 6; // The 7-12th vertices are for the light layer
-
-                layer = light ? 1 : 0; // 0 = dark, 1 = light
 
                 vec2 center = vec2(x, y);
-                if (light) {
-                    center += vec2(
-                        cos(-time),
-                        sin(-time)
-                    ) * ${LOGO.lightOffset};
-                }
+                
+                vec2 lightDir = normalize(vec2(
+                    cos(-time),
+                    sin(-time)
+                ));
+
+                brightness = dot(localPos, lightDir);
+                brightness = brightness * 0.5 + 0.5;
 
                 gl_Position =
                     vec4(
@@ -142,33 +125,31 @@
             precision mediump float;
 
             in vec2 localPos;
-            
+            in float brightness;
             out vec4 fragColor;
 
-            flat in int layer;
-            
             void main() {
                 float d = dot(localPos, localPos); // d = sqrt(localPos.x * localPos.x, localPos.y * localPos.y)
 
                 if (d > 1.0) // If the distance from the center is greater than the radius, discard the fragment
                     discard;
 
-                if (layer == 0) {
-                    fragColor = vec4(
-                        ${LOGO.darkLayer.r.toFixed(1)},
-                        ${LOGO.darkLayer.g.toFixed(1)},
-                        ${LOGO.darkLayer.b.toFixed(1)},
-                        ${LOGO.darkLayer.a.toFixed(1)}
-                    );
-                }
-                else {
-                    fragColor = vec4(
-                        ${LOGO.lightLayer.r.toFixed(1)},
-                        ${LOGO.lightLayer.g.toFixed(1)},
-                        ${LOGO.lightLayer.b.toFixed(1)},
-                        ${LOGO.lightLayer.a.toFixed(1)}
-                    );
-                }
+                vec3 dark = vec3(
+                    ${LOGO.darkLayer.r},
+                    ${LOGO.darkLayer.g},
+                    ${LOGO.darkLayer.b}
+                );
+
+                vec3 light = vec3(
+                    ${LOGO.lightLayer.r},
+                    ${LOGO.lightLayer.g},
+                    ${LOGO.lightLayer.b}
+                );
+
+                fragColor = vec4(
+                    mix(dark, light, brightness),
+                    1.0
+                );
             }
         `;
 
@@ -178,7 +159,9 @@
              * and configures instance offset.
              */
 
-            let gl = canvas.getContext("webgl2");
+            let gl = canvas.getContext("webgl2", {
+                premultipliedAlpha: false
+            });
 
             if (!gl && !webglNotSupportedWarningDisplayed) {
                 alert("Your browser does not support WebGL2!");
@@ -186,6 +169,10 @@
 
             // Sets background color (but doesn't use it yet)
             gl.clearColor(0, 0, 0, 0); // Fully transparent
+
+            // Enable alpha blending
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
             // Parameters: offsetX, offsetY, width, height
             gl.viewport(offsetX, 0, size, size);
@@ -250,7 +237,7 @@
             this.gl.drawArraysInstanced(
                 this.gl.TRIANGLES,
                 0,
-                12, // Number of vertices
+                6, // Number of vertices
                 this.instanceCount
             );
         }
