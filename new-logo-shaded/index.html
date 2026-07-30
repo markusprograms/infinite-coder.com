@@ -71,18 +71,7 @@
             -vertexSize, vertexSize
         ];
 
-        const screenVerts = [
-            // Post-processing is applied to the whole canvas
-            -1, -1,
-            1, -1,
-            -1,  1,
-
-            1, -1,
-            1,  1,
-            -1,  1
-        ];
-
-        const logoVertexShaderCode = `#version 300 es
+        const vertexShaderCode = `#version 300 es
             precision mediump float;
 
             uniform vec2 lightDir;
@@ -121,7 +110,7 @@
             }
         `;
 
-        const logoFragmentShaderCode = `#version 300 es
+        const fragmentShaderCode = `#version 300 es
             precision mediump float;
 
             in vec2 localPos;
@@ -160,89 +149,6 @@
             }
         `;
 
-        const antialiasingVertexShaderCode = `#version 300 es
-            precision mediump float;
-
-            in vec2 position;
-
-            out vec2 uv;
-
-            void main() {
-                uv = position * 0.5 + 0.5;
-
-                gl_Position = vec4(position,0,1);
-            }
-        `;
-
-        const antialiasingFragmentShaderCode = `#version 300 es
-precision mediump float;
-
-uniform sampler2D screenTexture;
-uniform vec2 texelSize;
-
-in vec2 uv;
-
-out vec4 fragColor;
-
-
-void main()
-{
-    float coverage = 0.0;
-
-    vec3 colorSum = vec3(0.0);
-    float colorCount = 0.0;
-
-
-    // 3x3 supersampling grid
-    for (int x = -1; x <= 1; x++)
-    {
-        for (int y = -1; y <= 1; y++)
-        {
-            vec2 offset = vec2(
-                float(x) * texelSize.x / 3.0,
-                float(y) * texelSize.y / 3.0
-            );
-
-
-            vec4 _sample = texture(
-                screenTexture,
-                uv + offset
-            );
-
-
-            // Count coverage
-            if (_sample.a > 0.5)
-            {
-                coverage += 1.0;
-
-                // Only opaque samples contribute color
-                colorSum += _sample.rgb;
-                colorCount += 1.0;
-            }
-        }
-    }
-
-
-    // Convert sample count to alpha
-    coverage /= 9.0;
-
-
-    vec3 color = vec3(0.0);
-
-
-    if (colorCount > 0.0)
-    {
-        color = colorSum / colorCount;
-    }
-
-
-    fragColor = vec4(
-        color,
-        coverage
-    );
-}
-        `;
-
         function Vector(x, y) {
             this.x = x; 
             this.y = y; 
@@ -261,9 +167,11 @@ void main()
         }
 
         function Renderer(canvas, size, instanceCount) {
-            /* Gets the WebGL context */
+            /**
+             * Creates a WebGL context for the provided canvas, sets the viewport, creates a WebGL program and supplies vertex data to the program
+             */
+
             let gl = canvas.getContext("webgl2", {
-                alpha: true,
                 premultipliedAlpha: false
             });
 
@@ -272,64 +180,24 @@ void main()
                 return;
             }
 
-            this.gl = gl;
-            this.size = size;
-            this.instanceCount = instanceCount;
+            // Sets background color (but doesn't use it yet)
+            gl.clearColor(0, 0, 0, 0); // Fully transparent
 
-            gl.clearColor(0, 0, 0, 0); // Sets background color
-            gl.enable(gl.BLEND);
+            // Parameters: offsetX, offsetY, width, height
             gl.viewport(0, 0, size, size);
 
-            /* Create offscreen texture */
-            this.texture = gl.createTexture();
-            gl.bindTexture(gl.TEXTURE_2D, this.texture);
+            // Create the program with the fetched shader codes
+            let program = createProgram(gl, vertexShaderCode, fragmentShaderCode);
 
-            gl.texImage2D(
-                gl.TEXTURE_2D,
-                0,
-                gl.RGBA,
-                size,
-                size,
-                0,
-                gl.RGBA,
-                gl.UNSIGNED_BYTE,
-                null
-            );
-
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-            /* Create framebuffer */
-            this.framebuffer = gl.createFramebuffer();
-            gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
-
-            gl.framebufferTexture2D(
-                gl.FRAMEBUFFER,
-                gl.COLOR_ATTACHMENT0,
-                gl.TEXTURE_2D,
-                this.texture,
-                0
-            );
-
-            if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
-                console.error("Framebuffer incomplete");
-            }
-
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-            // Create the shader programs
-            this.logoProgram = createProgram(gl, logoVertexShaderCode, logoFragmentShaderCode);
-            this.antialiasingProgram = createProgram(gl, antialiasingVertexShaderCode, antialiasingFragmentShaderCode);
-
-            this.logoVAO = gl.createVertexArray();
-            gl.bindVertexArray(this.logoVAO);
+            // Use the created program
+            gl.useProgram(program);
 
             // Creates the buffer
-            this.logoBuffer = gl.createBuffer();
+            let buffer = gl.createBuffer();
 
             // Tells WebGL that we are performing operations on this specific buffer
             // gl.ARRAY_BUFFER indicates that this buffer is for vertex data
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.logoBuffer);
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 
             // Sets data in the buffer using the mesh
             // The inputted data must be a Float32Aray
@@ -337,7 +205,7 @@ void main()
 
             // Gets the location of the attribute from the WebGLProgram
             // The name (here it's "vertPos") must match what's defined in the vertex shader (the shader states "in vec2 vertPos;")
-            let vertPosLocation = gl.getAttribLocation(this.logoProgram, "vertPos");
+            let vertPosLocation = gl.getAttribLocation(program, "vertPos");
 
             // Enable the vertex attribute
             gl.enableVertexAttribArray(vertPosLocation);
@@ -355,144 +223,14 @@ void main()
             // Tells WebGL how to get values out of the supplied buffer
             gl.vertexAttribPointer(vertPosLocation, via, gl.FLOAT, gl.FALSE, bpv, caob);
 
-            /* Fullscreen quad VAO */
-            this.screenVAO = gl.createVertexArray();
-
-            gl.bindVertexArray(this.screenVAO);
-
-            this.screenBuffer = gl.createBuffer(); 
-
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.screenBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(screenVerts), gl.STATIC_DRAW);
-
-            let positionLocation = gl.getAttribLocation(this.antialiasingProgram, "position");
-            gl.enableVertexAttribArray(positionLocation);
-
-            gl.vertexAttribPointer(
-                positionLocation,
-                2,
-                gl.FLOAT,
-                false,
-                0,
-                0
-            );
-
-            /* Uniform locations */
-            this.lightDirPos =
-                gl.getUniformLocation(
-                    this.logoProgram,
-                    "lightDir"
-                );
-
-
-            this.textureLocation =
-                gl.getUniformLocation(
-                    this.antialiasingProgram,
-                    "screenTexture"
-                );
-
-
-            this.texelSizeLocation =
-                gl.getUniformLocation(
-                    this.antialiasingProgram,
-                    "texelSize"
-                );
-
-            /* Restore default state */
-            gl.bindVertexArray(null);
-            gl.bindBuffer(gl.ARRAY_BUFFER, null);
+            this.gl = gl;
+            this.lightDirPos = gl.getUniformLocation(program, "lightDir");
+            this.instanceCount = instanceCount; 
         }
         Renderer.prototype.render = function(perf) {
-            let gl = this.gl;
-
-
-            // Pass 1: logo -> texture
-
-            gl.bindFramebuffer(
-                gl.FRAMEBUFFER,
-                this.framebuffer
-            );
-
-            gl.useProgram(this.logoProgram);
-            gl.bindVertexArray(this.logoVAO);
-
-            gl.clear(gl.COLOR_BUFFER_BIT);
-
-            let time = perf * LOGO.perfMultiplier;
-
-            let lightDir = new Vector(
-                Math.sin(time),
-                Math.cos(time)
-            ).normalize();
-
-            gl.uniform2fv(
-                this.lightDirPos,
-                [lightDir.x, lightDir.y]
-            );
-
-
-            gl.drawArraysInstanced(
-                gl.TRIANGLES,
-                0,
-                6,
-                this.instanceCount
-            );
-
-
-
-            // Pass 2: texture -> screen
-
-            gl.bindFramebuffer(
-                gl.FRAMEBUFFER,
-                null
-            );
-
-            gl.useProgram(this.antialiasingProgram);
-            gl.bindVertexArray(this.screenVAO);
-
-            gl.activeTexture(gl.TEXTURE0);
-
-            gl.bindTexture(
-                gl.TEXTURE_2D,
-                this.texture
-            );
-
-
-            gl.uniform1i(
-                this.textureLocation,
-                0
-            );
-
-
-            gl.uniform2f(
-                this.texelSizeLocation,
-                1 / this.size,
-                1 / this.size
-            );
-
-
-            gl.drawArrays(
-                gl.TRIANGLES,
-                0,
-                6
-            );
-
-
-            /*// PASS 1: Render logo into texture
-            this.gl.useProgram(this.logoProgram);
-
-            // Render to texture
-            this.gl.bindFramebuffer(
-                this.gl.FRAMEBUFFER,
-                this.framebuffer
-            );
-
-            this.gl.viewport(
-                0,
-                0,
-                this.size,
-                this.size
-            );
+            /**
+             * Renders on the canvas
+             */
 
             // Clears the color buffer bits, showing the background color
             this.gl.clear(this.gl.COLOR_BUFFER_BIT);
@@ -513,43 +251,6 @@ void main()
                 6, // Number of vertices
                 this.instanceCount
             );
-
-            // PASS 2: Render texture to screen with post-processing
-            this.gl.useProgram(this.antialiasingProgram);
-
-            this.gl.bindFramebuffer(
-                this.gl.FRAMEBUFFER,
-                null // This switches back to the canvas
-            );
-
-            this.gl.viewport(
-                0,
-                0,
-                this.size,
-                this.size
-            );
-
-            this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-
-            // Give the shader the texture we rendered earlier
-            this.gl.activeTexture(this.gl.TEXTURE0);
-
-            this.gl.bindTexture(
-                this.gl.TEXTURE_2D,
-                this.texture
-            );
-
-            this.gl.uniform1i(
-                this.textureLocation,
-                0
-            );
-
-            // Draw fullscreen quad
-            this.gl.drawArrays(
-                this.gl.TRIANGLES,
-                0,
-                6
-            );*/
         }
 
         // Fetches the canvas elements
