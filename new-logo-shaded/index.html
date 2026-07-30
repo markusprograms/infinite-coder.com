@@ -4,9 +4,26 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>New logo</title>
+        <style>
+            #logo-container {
+                position: relative;
+                overflow: hidden;
+            }
+            #logo-resizer {
+                transform: translate(-50%, -50%) scale(0.5);
+
+                position: absolute;
+                top: 50%;
+                left: 50%;
+            }
+        </style>
     </head>
     <body>
-        <canvas id="logo"></canvas>
+        <div id="logo-container">
+            <div id="logo-resizer">
+                <canvas id="logo"></canvas>
+            </div>
+        </div>
         <br>
         <b>FPS: </b><span id="fps-counter"></span>
     </body>
@@ -253,14 +270,23 @@
             );
         }
 
-        // Fetches the canvas elements
+        // Fetches the HTML elements
         let logo = document.getElementById("logo"); 
+        let logoContainer = document.getElementById("logo-container");
+        let logoResizer = document.getElementById("logo-resizer");
 
         // Resizes the canvas
-        logo.width = LOGO.size;
-        logo.height = LOGO.size; 
+        logo.width = LOGO.size * 2;
+        logo.height = LOGO.size * 2; 
 
-        let renderer = new Renderer(logo, LOGO.size, LOGO.instanceCount);
+        // Resizes the container
+        logoContainer.style.width = String(LOGO.size * (LOGO.radiusX + LOGO.thickness)) + "px";
+        logoContainer.style.height = String(LOGO.size * (LOGO.radiusY + LOGO.thickness)) + "px";
+
+        logoResizer.style.width = String(LOGO.size * 2) + "px";
+        logoResizer.style.height = String(LOGO.size * 2) + "px";
+
+        let renderer = new Renderer(logo, LOGO.size * 2, LOGO.instanceCount);
 
         let frames = 0;
         let lastTime = performance.now();
